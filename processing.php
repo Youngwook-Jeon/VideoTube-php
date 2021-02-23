@@ -9,7 +9,7 @@ if (!isset($_POST["uploadButton"])) {
 }
 
 $videoUploadData = new VideoUploadData(
-    $_POST["fileInput"], 
+    $_FILES["fileInput"], 
     $_POST["titleInput"], 
     $_POST["descriptionInput"],
     $_POST["privacyInput"],
