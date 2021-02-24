@@ -1,4 +1,5 @@
 uploads/
+ffmpeg/
 .DS_Store
 
 *.log

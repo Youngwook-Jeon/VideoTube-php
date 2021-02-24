@@ -4,6 +4,7 @@ class VideoProcessor {
     private $con;
     private $sizeLimit = 500000000; // 500MB
     private $allowedTypes = array("mp4", "flv", "webm", "mkv", "vob", "ogv", "ogg", "avi", "wmv", "mov", "mpeg", "mpg");
+    private $ffmpegPath = "ffmpeg/mac/regular-xampp/ffmpeg"; // Use ffmpeg in /ffmpeg/mac/regular-xampp directory
 
     public function __construct($con) {
         $this->con = $con;
@@ -23,7 +24,17 @@ class VideoProcessor {
         }
 
         if (move_uploaded_file($videoData["tmp_name"], $tempFilePath)) {
-            echo "File moved successfully";
+            $finalFilePath = $targetDir . uniqid() . ".mp4";
+
+            if (!$this->insertVideoData($videoUploadData, $finalFilePath)) {
+                echo "Insert query failed";
+                return false;
+            }
+
+            if (!$this->convertVideoToMp4($tempFilePath, $finalFilePath)) {
+                echo "Upload failed";
+                return false;
+            }
         }
     }
 
@@ -57,6 +68,36 @@ class VideoProcessor {
 
     private function hasError($data) {
         return $data["error"] != 0;
+    }
+
+    private function insertVideoData($uploadData, $filePath) {
+        $query = $this->con->prepare("INSERT INTO videos (title, uploadedBy, description, privacy, category, filePath) 
+                                        VALUES (:title, :uploadedBy, :description, :privacy, :category, :filePath)");
+        
+        $query->bindParam(":title", $uploadData->title);
+        $query->bindParam(":uploadedBy", $uploadData->uploadedBy);
+        $query->bindParam(":description", $uploadData->description);
+        $query->bindParam(":privacy", $uploadData->privacy);
+        $query->bindParam(":category", $uploadData->category);
+        $query->bindParam(":filePath", $filePath);
+
+        return $query->execute();
+    }
+
+    public function convertVideoToMp4($tempFilePath, $finalFilePath) {
+        $cmd = "$this->ffmpegPath -i $tempFilePath $finalFilePath 2>&1";
+
+        $outputLog = array();
+        exec($cmd, $outputLog, $returnCode);
+
+        if ($returnCode != 0) {
+            foreach($outputLog as $line) {
+                echo $line . "<br>";
+            }
+            return false;
+        }
+
+        return true;
     }
 }
 ?>
